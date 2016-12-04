@@ -257,40 +257,4 @@ class DQN_AGENT:
                 self.running_reward, self.reward_sum, self.episode_num), fh)
             fh.close()
         
-#        self.episode_num += 1
-#        self.running_reward = self.running_reward * 0.99 + self.reward_sum * 0.01
-#        self.reward_list.append(self.running_reward)
-#        print('action_num: %d, update_num: %d, epsilon: %2.2f, resetting env. episode reward total was %f. running mean: %f' \
-#              % (self.action_num, self.update_num, self.epsilon, self.reward_sum, self.running_reward))
-#        self.reward_sum = 0
-#        self.input_states = [np.zeros((flags.frame_dim, flags.frame_dim), dtype = 'float32')]*flags.num_frame #reset frame queue
-#        plt.figure(0)
-#        plt.clf()
-#        plt.plot(self.reward_list)
-#        plt.xlabel('episodes')
-#        plt.ylabel('running reward (100 episodes)')
-#        plt.savefig('Q_learning_performance_%slr_%sbias_large.png' % (flags.lr, flags.bias))
-#
-#        if self.episode_num % 100 == 0:
-#            self.saver.save(self.sess, "Qmodel.ckpt")
-#            fh = open('Qmodel.pkl', 'wb')
-        
-#        self.episode_num += 1
-#        self.running_reward = self.running_reward * 0.99 + self.reward_sum * 0.01
-#        self.reward_list.append(self.running_reward)
-#        print('action_num: %d, update_num: %d, epsilon: %2.2f, resetting env. episode reward total was %f. running mean: %f' \
-#              % (self.action_num, self.update_num, self.epsilon, self.reward_sum, self.running_reward))
-#        self.reward_sum = 0
-#        self.input_states = [np.zeros((flags.frame_dim, flags.frame_dim), dtype = 'float32')]*flags.num_frame #reset frame queue
-#        plt.figure(0)
-#        plt.clf()
-#        plt.plot(self.reward_list)
-#        plt.xlabel('episodes')
-#        plt.ylabel('running reward (100 episodes)')
-#        plt.savefig('Q_learning_performance_%slr_%sbias_large.png' % (flags.lr, flags.bias))
-#
-#        if self.episode_num % 100 == 0:
-#            self.saver.save(self.sess, "Qmodel.ckpt")
-#            fh = open('Qmodel.pkl', 'wb')
-        
 
