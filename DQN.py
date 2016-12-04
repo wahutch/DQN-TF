@@ -252,7 +252,7 @@ class DQN_AGENT:
 
         if self.episode_num % 100 == 0:
             self.saver.save(self.sess, "Qmodel.ckpt")
-            fh = open('Qmodel.pkl', 'wb')
+            fh = open('Qmodel_status.pkl', 'wb')
             pickle.dump((self.epsilon, self.update_num, self.action_num, self.reward_list, \
                 self.running_reward, self.reward_sum, self.episode_num), fh)
             fh.close()
