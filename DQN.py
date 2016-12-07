@@ -154,7 +154,7 @@ class DQN_AGENT:
             self.update_num = 1
             self.action_num = 0
             self.reward_list = []
-            self.running_reward = -21
+            self.running_reward = None
             self.reward_sum = 0
             self.episode_num = 0
             self.sess.run(init)
@@ -234,7 +234,7 @@ class DQN_AGENT:
         
         self.episode_num += 1
         self.reward_list.append(self.reward_sum)
-        self.running_reward = self.running_reward * 0.99 + self.reward_sum * 0.01
+        self.running_reward = self.reward_sum if self.running_reward is None else self.running_reward * 0.99 + self.reward_sum * 0.01
         print('episode_num: %d, action_num: %d, epsilon: %2.2f, resetting env. episode reward total was %f. running mean: %f' \
               % (self.episode_num, self.action_num, self.epsilon, self.reward_sum, self.running_reward))
         self.reward_sum = 0
