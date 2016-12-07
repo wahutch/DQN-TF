@@ -122,7 +122,7 @@ class DQN_AGENT:
     def preprocess(self, screen):    #as in devsisters/DQN-tensorflow
         flags = self.flags
         return cv2.resize(cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)/255.,
-                          (flags.frame_dim, flags.frame_        
+                          (flags.frame_dim, flags.frame))        
   
     def getState(self, index, buffer_count, buffer_index, state_buffer):
         flags = self.flags
