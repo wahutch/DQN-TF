@@ -118,15 +118,14 @@ class DQN_AGENT:
         self.new_states = np.empty((flags.batch_size, flags.num_frame, flags.frame_dim, flags.frame_dim), dtype='float32')
         self.sample_inds = np.empty(flags.batch_size, dtype='int32')
         
+
+    def preprocess(self, screen):
+        flags = self.flags
         
-    def prepro(self, I):    #stolen from Andrej Karpathy: https://gist.github.com/karpathy/a4166c7fe253700972fcbc77e4ea32c5
-        """ prepro 210x160x3 uint8 frame into 6400 (80x80) 1D float vector """
-        I = I[35:195] # crop
-        I = I[::2,::2,0] # downsample by factor of 2
-        I[I == 144] = 0 # erase background (background type 1)
-        I[I == 109] = 0 # erase background (background type 2)
-        I[I != 0] = 1 # everything else (paddles, ball) just set to 1
-        return I.astype(np.float)
+        y = .2126*screen[:,:,0] + .7152*screen[:,:,1] + .0722*screen[:,:,2]
+        y.astype(np.float)
+        y = np.imresize(y, flags.frame_dim, flags.frame_dim)
+        
   
     def getState(self, index, buffer_count, buffer_index, state_buffer):
         flags = self.flags
@@ -168,7 +167,7 @@ class DQN_AGENT:
         
     def observeState(self, observation):
         
-        self.state = self.prepro(observation)
+        self.state = self.preprocess(observation)
         self.input_states.append(self.state.astype('float32'))
         del self.input_states[0]
 
@@ -252,9 +251,7 @@ class DQN_AGENT:
 
         if self.episode_num % 100 == 0:
             self.saver.save(self.sess, "Qmodel.ckpt")
-            fh = open('Qmodel_status.pkl', 'wb')
+            fh = open('Qmodel.pkl', 'wb')
             pickle.dump((self.epsilon, self.update_num, self.action_num, self.reward_list, \
                 self.running_reward, self.reward_sum, self.episode_num), fh)
-            fh.close()
-        
-
+            fh.close()        
