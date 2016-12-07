@@ -5,7 +5,6 @@ import pickle
 import matplotlib as mp
 mp.use('Agg')
 from matplotlib import pyplot as plt
-from scipy.misc import imresize
 import cv2
 
 class DQN_AGENT:
