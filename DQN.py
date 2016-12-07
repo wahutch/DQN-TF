@@ -6,6 +6,7 @@ import matplotlib as mp
 mp.use('Agg')
 from matplotlib import pyplot as plt
 from scipy.misc import imresize
+import cv2
 
 class DQN_AGENT:
     
@@ -119,15 +120,10 @@ class DQN_AGENT:
         self.new_states = np.empty((flags.batch_size, flags.num_frame, flags.frame_dim, flags.frame_dim), dtype='float32')
         self.sample_inds = np.empty(flags.batch_size, dtype='int32')
         
-
-    def preprocess(self, screen):
+    def preprocess(self, screen):    #as in devsisters/DQN-tensorflow
         flags = self.flags
-        
-        y = .2126*screen[:,:,0] + .7152*screen[:,:,1] + .0722*screen[:,:,2]
-        y = y.astype(np.float)
-        y = imresize(y, (flags.frame_dim, flags.frame_dim))
-        return y
-        
+        return cv2.resize(cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)/255.,
+                          (flags.frame_dim, flags.frame_        
   
     def getState(self, index, buffer_count, buffer_index, state_buffer):
         flags = self.flags

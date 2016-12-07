@@ -47,7 +47,7 @@ flags = parser.parse_args()
 
 flags.rms_denom = 1e-2        #avoids division by zero in RMSProp update
 flags.num_frame = 4           #number of recent frames used as input to Q-network
-flags.frame_dim = 80          #dimension of processed frame (80x80)
+flags.frame_dim = 84          #dimension of processed frame (80x80)
 flags.batch_size = 32         #size of each training mini-batch
 flags.action_reps = 4         #number of times agent repeats an action
 flags.eps_init = 1            #initial value for exploration probabilit
