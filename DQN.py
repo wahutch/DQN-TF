@@ -124,8 +124,9 @@ class DQN_AGENT:
         flags = self.flags
         
         y = .2126*screen[:,:,0] + .7152*screen[:,:,1] + .0722*screen[:,:,2]
-        y.astype(np.float)
-        y = imresize(y, flags.frame_dim, flags.frame_dim)
+        y = y.astype(np.float)
+        y = imresize(y, (flags.frame_dim, flags.frame_dim))
+        return y
         
   
     def getState(self, index, buffer_count, buffer_index, state_buffer):
