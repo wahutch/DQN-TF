@@ -119,6 +119,29 @@ class DQN_AGENT:
         self.new_states = np.empty((flags.batch_size, flags.num_frame, flags.frame_dim, flags.frame_dim), dtype='float32')
         self.sample_inds = np.empty(flags.batch_size, dtype='int32')
         
+    def __init_state(self):
+        flags = self.flags
+        
+        self.saver = tf.train.Saver(max_to_keep=1)
+        if flags.resume:
+            self.saver.restore(self.sess, "/tmp/Qmodel.ckpt")
+            fh = open('state_info.pkl', 'rb')
+            self.epsilon, self.update_num, self.action_num, self.reward_list, \
+                        self.running_reward, self.reward_sum, \
+                        self.episode_num = pickle.load(fh)
+            fh.close()
+        else:
+            init = tf.initialize_all_variables()
+            self.sess.run(init)
+            self.epsilon = flags.eps_init
+            self.update_num = 1
+            self.action_num = 0
+            self.reward_list = []
+            self.running_reward = None
+            self.reward_sum = 0
+            self.episode_num = 0
+            self.sess.run(init)
+
     def preprocess(self, screen):    #as in devsisters/DQN-tensorflow
         flags = self.flags
         return cv2.resize(cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)/255.,
@@ -136,28 +159,6 @@ class DQN_AGENT:
           indexes = [(index - i) % buffer_count for i in reversed(range(flags.num_frame))]
           return state_buffer[indexes,:,:]
 
-    def __init_state(self):
-        flags = self.flags
-        
-        self.saver = tf.train.Saver()
-        if flags.resume:
-            self.saver.restore(self.sess, "Qmodel.ckpt")
-            fh = open('Qmodel.pkl', 'rb')
-            self.epsilon, self.update_num, self.action_num, self.reward_list, \
-                        self.running_reward, self.reward_sum, \
-                        self.episode_num = pickle.load(fh)
-            fh.close()
-        else:
-            init = tf.global_variables_initializer()
-            self.sess.run(init)
-            self.epsilon = flags.eps_init
-            self.update_num = 1
-            self.action_num = 0
-            self.reward_list = []
-            self.running_reward = None
-            self.reward_sum = 0
-            self.episode_num = 0
-            self.sess.run(init)
             
     def updateTargetNetwork(self):
         self.sess.run(self.target_network_update)
@@ -184,7 +185,7 @@ class DQN_AGENT:
             
     def annealExplore(self):
         flags = self.flags
-        if self.epsilon > flags.eps_final and self.action_num > flags.start_train: 
+        if self.epsilon > flags.eps_final and self.buffer_count > flags.start_train: 
             self.epsilon -= (flags.eps_init - flags.eps_final)/flags.anneal
 
     def storeReplay(self, action, reward, done):
@@ -247,8 +248,9 @@ class DQN_AGENT:
         plt.savefig('Q_learning_performance_%slr_%sbias_large.png' % (flags.lr, flags.bias))
 
         if self.episode_num % 100 == 0:
-            self.saver.save(self.sess, "Qmodel.ckpt")
-            fh = open('Qmodel.pkl', 'wb')
+            self.saver.save(self.sess, "/tmp/Qmodel.ckpt")
+            fh = open('state_info.pkl', 'wb')
             pickle.dump((self.epsilon, self.update_num, self.action_num, self.reward_list, \
                 self.running_reward, self.reward_sum, self.episode_num), fh)
             fh.close()        
+            
