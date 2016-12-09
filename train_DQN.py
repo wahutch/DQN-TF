@@ -43,6 +43,10 @@ parser.add_argument('--resume',
 parser.add_argument('--render',
                     help='render the game screen',
                     action='store_true')
+parser.add_argument('--no_op',
+                    help='maximum number of dummy ops to start game',
+                    type=int,
+                    default = 30)
 flags = parser.parse_args()
 
 flags.rms_denom = 1e-2        #avoids division by zero in RMSProp update
@@ -52,7 +56,7 @@ flags.batch_size = 32         #size of each training mini-batch
 flags.action_reps = 4         #number of times agent repeats an action
 flags.eps_init = 1            #initial value for exploration probabilit
 flags.eps_final = .1          #final value (after annealing) for explore prob
-flags.start_train = 10**5     #number of actions after which training begins
+flags.start_train = 5*10**4     #number of actions after which training begins
 flags.buffer_size = 10**6     #size of replay memory buffer
 flags.train_int = 4           #number of actions selected between training iters
 flags.tn_update_freq = 10**4  #frequency of target network update
@@ -62,7 +66,7 @@ flags.num_action = env.action_space.n     #Number of possible actions for chosen
 
 agent = AGENT(flags)
 
-observation = env.reset()
+observation = agent.initGame(env)
 while True:
     if flags.render: env.render()
     
@@ -73,13 +77,12 @@ while True:
     for _ in range(flags.action_reps):
         observation, action_reward, done, info = env.step(action)
         reward += action_reward
-        if done:
-            break
+        
             
     agent.storeReplay(action, reward, done)
     agent.train()
     agent.annealExplore()
     
     if done:
-        observation = env.reset() #reset env
         agent.recordProgress()
+        observation = agent.initGame(env)

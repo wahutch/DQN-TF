@@ -127,8 +127,7 @@ class DQN_AGENT:
             self.saver.restore(self.sess, "/tmp/Qmodel.ckpt")
             fh = open('state_info.pkl', 'rb')
             self.epsilon, self.update_num, self.action_num, self.reward_list, \
-                        self.running_reward, self.reward_sum, \
-                        self.episode_num = pickle.load(fh)
+                        self.running_reward, self.episode_num = pickle.load(fh)
             fh.close()
         else:
             init = tf.initialize_all_variables()
@@ -138,9 +137,20 @@ class DQN_AGENT:
             self.action_num = 0
             self.reward_list = []
             self.running_reward = None
-            self.reward_sum = 0
             self.episode_num = 0
             self.sess.run(init)
+            
+    def initGame(self, env):
+        flags = self.flags
+        self.reward_sum=0
+        observation = env.reset()
+        self.input_states = [self.preprocess(observation).astype('float32')]*flags.num_frame
+        for _ in range(np.random.randint(0,flags.no_op+1)):
+            observation, reward, done, info = env.step(0)
+            self.input_states.append(self.preprocess(observation.astype('float32')))
+            del self.input_states[0]
+        return observation
+            
 
     def preprocess(self, screen):    #as in devsisters/DQN-tensorflow
         flags = self.flags
@@ -238,8 +248,6 @@ class DQN_AGENT:
         self.running_reward = self.reward_sum if self.running_reward is None else self.running_reward * 0.99 + self.reward_sum * 0.01
         print('episode_num: %d, action_num: %d, epsilon: %2.2f, resetting env. episode reward total was %f. running mean: %f' \
               % (self.episode_num, self.action_num, self.epsilon, self.reward_sum, self.running_reward))
-        self.reward_sum = 0
-        self.input_states = [np.zeros((flags.frame_dim, flags.frame_dim), dtype = 'float32')]*flags.num_frame #reset frame queue
         plt.figure(0)
         plt.clf()
         plt.plot(self.reward_list)
@@ -251,6 +259,6 @@ class DQN_AGENT:
             self.saver.save(self.sess, "/tmp/Qmodel.ckpt")
             fh = open('state_info.pkl', 'wb')
             pickle.dump((self.epsilon, self.update_num, self.action_num, self.reward_list, \
-                self.running_reward, self.reward_sum, self.episode_num), fh)
+                self.running_reward, self.episode_num), fh)
             fh.close()        
             
