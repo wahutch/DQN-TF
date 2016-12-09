@@ -125,9 +125,10 @@ class DQN_AGENT:
         self.saver = tf.train.Saver(max_to_keep=1)
         if flags.resume:
             self.saver.restore(self.sess, "/tmp/Qmodel.ckpt")
-            fh = open('state_info.pkl', 'rb')
+            fh = open('/tmp/state_info.pkl', 'rb')
             self.epsilon, self.update_num, self.action_num, self.reward_list, \
-                        self.running_reward, self.episode_num = pickle.load(fh)
+                        self.running_reward_list, self.running_reward, \
+                        self.episode_num = pickle.load(fh)
             fh.close()
         else:
             init = tf.initialize_all_variables()
@@ -136,6 +137,7 @@ class DQN_AGENT:
             self.update_num = 1
             self.action_num = 0
             self.reward_list = []
+            self.running_reward_list = []
             self.running_reward = None
             self.episode_num = 0
             self.sess.run(init)
@@ -246,19 +248,23 @@ class DQN_AGENT:
         self.episode_num += 1
         self.reward_list.append(self.reward_sum)
         self.running_reward = self.reward_sum if self.running_reward is None else self.running_reward * 0.99 + self.reward_sum * 0.01
+        self.running_reward_list.append(self.running_reward)
         print('episode_num: %d, action_num: %d, epsilon: %2.2f, resetting env. episode reward total was %f. running mean: %f' \
               % (self.episode_num, self.action_num, self.epsilon, self.reward_sum, self.running_reward))
         plt.figure(0)
         plt.clf()
-        plt.plot(self.reward_list)
-        plt.xlabel('episodes')
-        plt.ylabel('episode reward')
+        plt.plot(self.reward_list, label='per epsiode reward')
+        plt.plot(self.running_reward_list, label='average (100 eps)', color='r')
+        plt.xlabel('episode')
+        plt.ylabel('reward')
+        plt.legend(loc=2)
         plt.savefig('Q_learning_performance_%slr_%sbias_large.png' % (flags.lr, flags.bias))
 
         if self.episode_num % 100 == 0:
             self.saver.save(self.sess, "/tmp/Qmodel.ckpt")
-            fh = open('state_info.pkl', 'wb')
-            pickle.dump((self.epsilon, self.update_num, self.action_num, self.reward_list, \
-                self.running_reward, self.episode_num), fh)
+            fh = open('/tmp/state_info.pkl', 'wb')
+            pickle.dump((self.epsilon, self.update_num, self.action_num, 
+                         self.reward_list, self.running_reward_list, 
+                         self.running_reward, self.episode_num), fh)
             fh.close()        
             
