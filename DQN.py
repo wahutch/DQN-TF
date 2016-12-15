@@ -5,7 +5,9 @@ import pickle
 import matplotlib as mp
 mp.use('Agg')
 from matplotlib import pyplot as plt
-import cv2
+#import cv2
+from skimage.transform import resize
+from skimage.color import rgb2gray
 
 class DQN_AGENT:
     
@@ -49,7 +51,8 @@ class DQN_AGENT:
                                          initializer=tf.contrib.layers.xavier_initializer_conv2d(uniform=True))
                 conv = tf.nn.conv2d(input_frame, kernel, [1,4,4,1], padding = 'SAME')
                 biases = tf.get_variable('biases', shape=CONV1_SHAPE[-1],
-                                         initializer=tf.random_uniform_initializer(minval=-flags.bias, maxval=flags.bias, dtype=tf.float32))
+                                         initializer=tf.random_uniform_initializer(minval=0, 
+                                                                                   maxval=flags.bias, dtype=tf.float32))
                 hidden1 = tf.nn.relu(tf.nn.bias_add(conv,biases))
     
             with tf.variable_scope('conv2'):
@@ -57,7 +60,8 @@ class DQN_AGENT:
                                          initializer=tf.contrib.layers.xavier_initializer_conv2d(uniform = True))
                 conv = tf.nn.conv2d(hidden1, kernel, [1,2,2,1], padding = 'SAME')
                 biases = tf.get_variable('biases', shape=CONV2_SHAPE[-1],
-                                         initializer=tf.random_uniform_initializer(minval=-flags.bias, maxval=flags.bias, dtype=tf.float32))
+                                         initializer=tf.random_uniform_initializer(minval=0, 
+                                                                                   maxval=flags.bias, dtype=tf.float32))
                 hidden2 = tf.nn.relu(tf.nn.bias_add(conv,biases))
                 
             with tf.variable_scope('conv3'):
@@ -65,7 +69,8 @@ class DQN_AGENT:
                                          initializer=tf.contrib.layers.xavier_initializer_conv2d(uniform = True))
                 conv = tf.nn.conv2d(hidden2, kernel, [1,1,1,1], padding = 'SAME')
                 biases = tf.get_variable('biases', shape=CONV3_SHAPE[-1],
-                                         initializer=tf.random_uniform_initializer(minval=-flags.bias, maxval=flags.bias, dtype=tf.float32))
+                                         initializer=tf.random_uniform_initializer(minval=0, 
+                                                                                   maxval=flags.bias, dtype=tf.float32))
                 hidden3 = tf.nn.relu(tf.nn.bias_add(conv,biases))
     
             with tf.variable_scope('fc1'):
@@ -74,7 +79,8 @@ class DQN_AGENT:
                 weights = tf.get_variable('weights', shape=[reshape_hidden3.get_shape()[1], FC1_SHAPE],
                                           initializer=tf.contrib.layers.xavier_initializer(uniform = True))
                 biases = tf.get_variable('biases', shape=FC1_SHAPE,
-                                         initializer=tf.random_uniform_initializer(minval=-flags.bias, maxval=flags.bias, dtype=tf.float32))
+                                         initializer=tf.random_uniform_initializer(minval=0, 
+                                                                                   maxval=flags.bias, dtype=tf.float32))
                 hidden4 = tf.nn.relu(tf.matmul(reshape_hidden3, weights) + biases)
     
             with tf.variable_scope('action_value'):
@@ -99,7 +105,10 @@ class DQN_AGENT:
         masked_action_qvals = tf.reduce_sum(self.action_value_network*self.action_mask_pl, reduction_indices=[1,])
         Q_loss = tf.reduce_mean(tf.square(max_one_step - masked_action_qvals))
         
-        optimizer = tf.train.RMSPropOptimizer(flags.lr, decay=flags.decay, momentum=flags.momentum, epsilon=flags.rms_denom)
+        if flags.opt_type is 'RMSprop':
+            optimizer = tf.train.RMSPropOptimizer(flags.lr, decay=flags.decay, momentum=flags.momentum, epsilon=flags.opt_eps)
+        elif flags.opt_type is 'Adam':
+            optimizer = tf.train.AdamOptimizer(flags.lr, beta1=flags.beta1, beta2=flags.beta2, epsilon=flags.opt_eps)
         Qgrads = optimizer.compute_gradients(Q_loss, var_list=Qvars)
         Qgrads = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in Qgrads]
         self.apply_Qgrads = optimizer.apply_gradients(Qgrads)
@@ -146,18 +155,20 @@ class DQN_AGENT:
         flags = self.flags
         self.reward_sum=0
         observation = env.reset()
+        self.start_lives = env.ale.lives()
         self.input_states = [self.preprocess(observation).astype('float32')]*flags.num_frame
-        for _ in range(np.random.randint(0,flags.no_op+1)):
-            observation, reward, done, info = env.step(0)
-            self.input_states.append(self.preprocess(observation.astype('float32')))
-            del self.input_states[0]
         return observation
             
 
-    def preprocess(self, screen):    #as in devsisters/DQN-tensorflow
+#    def preprocess(self, screen):    #as in devsisters/DQN-tensorflow
+#        flags = self.flags
+#        return cv2.resize(cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)/255.,
+#                          (flags.frame_dim, flags.frame_dim))    
+    def preprocess(self, screen):
         flags = self.flags
-        return cv2.resize(cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)/255.,
-                          (flags.frame_dim, flags.frame_dim))        
+        out_screen = resize(rgb2gray(screen), (110, flags.frame_dim))[16:-10,:]
+        return out_screen
+        
   
     def getState(self, index, buffer_count, buffer_index, state_buffer):
         flags = self.flags
@@ -193,7 +204,14 @@ class DQN_AGENT:
         else:
             action = self.sess.run(self.greedy_action, feed_dict = {self.current_state_pl:self.formatted_input})[0]
                                    
-        return action                         
+        return action  
+
+    def takeAction(self, env, action):   
+        self.lives = env.ale.lives()
+        observation, reward, done, info = env.step(action) 
+        if self.lives > env.ale.lives():
+            reward -= 1    
+        return observation, reward, done                   
             
     def annealExplore(self):
         flags = self.flags
@@ -246,6 +264,7 @@ class DQN_AGENT:
         flags = self.flags
         
         self.episode_num += 1
+        self.reward_sum += self.start_lives
         self.reward_list.append(self.reward_sum)
         self.running_reward = self.reward_sum if self.running_reward is None else self.running_reward * 0.99 + self.reward_sum * 0.01
         self.running_reward_list.append(self.running_reward)
