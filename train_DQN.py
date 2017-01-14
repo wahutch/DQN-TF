@@ -6,13 +6,13 @@ from DQN import DQN_AGENT as AGENT
 parser = argparse.ArgumentParser(description='Trains a DQN in Tensorflow.')
 parser.add_argument('--env', metavar='environment', 
                     help='select an atari environment',
-                    default='Pong-v0',
-#                    default='Breakout-v0',
+#                    default='Pong-v0',
+                    default='Breakout-v0',
                     choices=['Pong-v0', 'Breakout-v0'])  #can add more, after testing
 parser.add_argument('--seed', metavar='random seed',
                     help='set the random seed for numpy/tensorflow',
                     type=int,
-                    default=1)
+                    default=150)
 parser.add_argument('--gamma',
                     help='discount parameter for Q-learning',
                     metavar='gamma',
@@ -54,7 +54,7 @@ parser.add_argument('--render',
                     action='store_true')
 parser.add_argument('--opt_type', metavar='opt_type',
                     help='type of optimizer',
-                    default='RMSprop',
+                    default='Adam',
                     choices=['RMSprop', 'Adam'])
 
 flags = parser.parse_args()
@@ -68,8 +68,8 @@ flags.eps_init = 1            #initial value for exploration probability
 flags.eps_final = .1          #final value (after annealing) for explore prob
 flags.start_train = 5*10**4     #number of actions after which training begins
 flags.buffer_size = 10**6     #size of replay memory buffer
-flags.train_int = 4           #number of actions selected between training iters
-flags.tn_update_freq = 10**4  #frequency of target network update
+flags.train_int = 4          #number of actions selected between training iters
+flags.tn_update_freq = 2*10**4  #frequency of target network update
 
 env = gym.make(flags.env)  #set environment
 flags.num_action = env.action_space.n     #Number of possible actions for chosen env
