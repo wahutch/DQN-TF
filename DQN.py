@@ -26,8 +26,8 @@ class DQN_AGENT:
         self._action_mask_pl = tf.placeholder(tf.float32, shape=(None, flags.num_action))
         self._finished_pl = tf.placeholder(tf.float32, shape=(None))
         
-        self._action_value_network = self.__init_network(self._current_state_pl, 'Qvars')
-        self._target_network = tf.stop_gradient(self.__init_network(self._newstate_pl, 'target'))
+        self._action_value_network = self._init_network(self._current_state_pl, 'Qvars')
+        self._target_network = tf.stop_gradient(self._init_network(self._newstate_pl, 'target'))
         
         self._init_training()
         self._init_memory()
