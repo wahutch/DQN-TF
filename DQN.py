@@ -140,7 +140,7 @@ class DQN_AGENT:
             self._saver.restore(self._sess, "/tmp/DQNmodel.ckpt")
             fh = open('/tmp/DQNstate.pkl', 'rb')
             self._epsilon, self._update_num, self._action_num, \
-                        self._epoch, self._epochReward = pickle.load(fh)
+                        self._epoch, self._epochReward, self._maxReward = pickle.load(fh)
             fh.close()
         else:
             init = tf.global_variables_initializer()
@@ -150,6 +150,7 @@ class DQN_AGENT:
             self._action_num = 0
             self._epoch = 0
             self._epochReward = []
+            self._maxReward = 0
             self._sess.run(init)
             
     def initGame(self, env):
@@ -305,7 +306,7 @@ class DQN_AGENT:
                 episodeNum += 1
                 rewardSum = 0
                 observation = self.initGame(self._evalEnv)
-                
+        self._maxReward = np.max(self._maxReward, np.max(episodeReward))        
         self._epochReward.append(np.mean(episodeReward))
                 
         
