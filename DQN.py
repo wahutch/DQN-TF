@@ -271,7 +271,8 @@ class DQN_AGENT:
         if self._eval:
             print("epoch {} finished, evaluating agent performance...".format(self._epoch))
             self._evalAgent()
-            print('average episode reward: {}, epsilon: {}'.format(self._epochReward[self._epoch-1], self._epsilon))
+            print('average episode reward: {}, epsilon: {}, max reward achieved thus far: {}'.format(
+                  self._epochReward[self._epoch-1], self._epsilon, self._maxReward))
             
             plt.figure(0)
             plt.clf()
