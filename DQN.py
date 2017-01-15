@@ -307,7 +307,7 @@ class DQN_AGENT:
                 episodeNum += 1
                 rewardSum = 0
                 observation = self.initGame(self._evalEnv)
-        self._maxReward = np.max(self._maxReward, np.max(episodeReward))        
+        self._maxReward = np.max([self._maxReward, np.max(episodeReward)])        
         self._epochReward.append(np.mean(episodeReward))
                 
         
