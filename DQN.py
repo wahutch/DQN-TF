@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import tensorflow as tf
+import gym
 import numpy as np
 import pickle
 import matplotlib as mp
@@ -133,37 +134,28 @@ class DQN_AGENT:
         
         self.saver = tf.train.Saver(max_to_keep=1)
         if flags.resume:
-            self.saver.restore(self.sess, "/tmp/Qmodel.ckpt")
-            fh = open('/tmp/state_info.pkl', 'rb')
-            self.epsilon, self.update_num, self.action_num, self.reward_list, \
-                        self.running_reward_list, self.running_reward, \
-                        self.episode_num = pickle.load(fh)
+            self.saver.restore(self.sess, "/tmp/DQNmodel.ckpt")
+            fh = open('/tmp/DQNstate.pkl', 'rb')
+            self.epsilon, self.update_num, self.action_num, \
+                        self.epoch, self.epochReward = pickle.load(fh)
             fh.close()
         else:
-            init = tf.initialize_all_variables()
+            init = tf.global_variables_initializer()
             self.sess.run(init)
             self.epsilon = flags.eps_init
             self.update_num = 1
             self.action_num = 0
-            self.reward_list = []
-            self.running_reward_list = []
-            self.running_reward = None
-            self.episode_num = 0
+            self.epoch = 0
+            self.epochReward = []
             self.sess.run(init)
             
     def initGame(self, env):
         flags = self.flags
-        self.reward_sum=0
         observation = env.reset()
         self.start_lives = env.ale.lives()
         self.input_states = [self.preprocess(observation).astype('float32')]*flags.num_frame
         return observation
-            
-
-#    def preprocess(self, screen):    #as in devsisters/DQN-tensorflow
-#        flags = self.flags
-#        return cv2.resize(cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)/255.,
-#                          (flags.frame_dim, flags.frame_dim))    
+             
     def preprocess(self, screen):
         flags = self.flags
         out_screen = resize(rgb2gray(screen), (110, flags.frame_dim))[16:-10,:]
@@ -195,11 +187,12 @@ class DQN_AGENT:
         self.formatted_input = np.stack(self.input_states, axis = 2)
         self.formatted_input = np.reshape(self.formatted_input, (1,) + self.formatted_input.shape)
         
-    def chooseAction(self):
+    def chooseAction(self, epsilon=None):
         flags = self.flags
+        epsilon = epsilon or self.epsilon
         
         self.action_num+=1
-        if np.random.rand() < self.epsilon:
+        if np.random.rand() < epsilon:
             action = np.random.randint(0, flags.num_action)
         else:
             action = self.sess.run(self.greedy_action, feed_dict = {self.current_state_pl:self.formatted_input})[0]
@@ -210,8 +203,13 @@ class DQN_AGENT:
         self.lives = env.ale.lives()
         observation, reward, done, info = env.step(action) 
         if self.lives > env.ale.lives():
-            reward -= 1    
-        return observation, reward, done                   
+            reward -= 1  
+            done = True
+        return observation, reward, done 
+
+    def _takeAction(self, env, action):   
+        observation, reward, done, info = env.step(action) 
+        return observation, reward, done                     
             
     def annealExplore(self):
         flags = self.flags
@@ -227,7 +225,6 @@ class DQN_AGENT:
         self.finished_buffer[self.buffer_index] = done
         self.buffer_count = max(self.buffer_count, self.buffer_index + 1)
         self.buffer_index = (self.buffer_index + 1) % flags.buffer_size
-        self.reward_sum += reward
         
     def train(self):
         flags = self.flags
@@ -260,30 +257,53 @@ class DQN_AGENT:
             if self.update_num % flags.tn_update_freq == 0:
                   self.updateTargetNetwork()
                   
-    def recordProgress(self):
+    def episodeFinished(self):
         flags = self.flags
         
-        self.episode_num += 1
-        self.reward_sum += self.start_lives
-        self.reward_list.append(self.reward_sum)
-        self.running_reward = self.reward_sum if self.running_reward is None else self.running_reward * 0.99 + self.reward_sum * 0.01
-        self.running_reward_list.append(self.running_reward)
-        print('episode_num: %d, action_num: %d, epsilon: %2.2f, resetting env. episode reward total was %f. running mean: %f' \
-              % (self.episode_num, self.action_num, self.epsilon, self.reward_sum, self.running_reward))
-        plt.figure(0)
-        plt.clf()
-        plt.plot(self.reward_list, label='per epsiode reward')
-        plt.plot(self.running_reward_list, label='average (100 eps)', color='r')
-        plt.xlabel('episode')
-        plt.ylabel('reward')
-        plt.legend(loc=2)
-        plt.savefig('Q_learning_performance_%slr_%sbias_large.png' % (flags.lr, flags.bias))
-
-        if self.episode_num % 100 == 0:
-            self.saver.save(self.sess, "/tmp/Qmodel.ckpt")
-            fh = open('/tmp/state_info.pkl', 'wb')
+        if self.update_num % flags.epoch_length == 0:
+            self.epoch += 1
+            print("epoch {} finished, evaluating agent performance...".format(self.epoch))
+            self.evalAgent()
+            print('average episode reward: {}, epsilon: {}'.format(self.epochReward[self.epoch], self.epsilon)
+                  % (self.episode_num, self.action_num, self.epsilon, self.reward_sum, self.running_reward))
+            
+            plt.figure(0)
+            plt.clf()
+            plt.plot(range(self.epoch), self.epochReward, label='average episode reward')
+            plt.xlabel('epoch')
+            plt.ylabel('reward')
+            plt.legend(loc=2)
+            plt.savefig('DQN_%slr.png' % (flags.lr))
+    
+            self.saver.save(self.sess, "/tmp/DQNmodel.ckpt")
+            fh = open('/tmp/DQNstate.pkl', 'wb')
             pickle.dump((self.epsilon, self.update_num, self.action_num, 
-                         self.reward_list, self.running_reward_list, 
-                         self.running_reward, self.episode_num), fh)
-            fh.close()        
+                         self.episode_num), fh)
+            fh.close()   
+            
+    def evalAgent(self):
+        flags = self.flags
+        
+        evalEnv = gym.make(flags.env)  #set environment
+        evalEnv.ale.setBool('color_averaging', True)
+        observation = self.initGame(evalEnv)
+        rewardSum = 0
+        self.episodeRewards = []
+
+        for _ in range(flags.evalEpisodes):
+            self.observeState(observation)
+            action = self.chooseAction(.05)
+            observation, reward, done = self._takeAction(evalEnv, action)   
+            rewardSum += reward
+            
+            if done:
+                self.episodeRewards.append(rewardSum)
+                rewardSum = 0
+                observation = self.initGame(evalEnv)
+                
+        self.epochReward.append(np.mean(self.episodeRewards))
+                
+        
+                
+            
             

@@ -56,20 +56,27 @@ parser.add_argument('--opt_type', metavar='opt_type',
                     help='type of optimizer',
                     default='Adam',
                     choices=['RMSprop', 'Adam'])
+parser.add_argument('--num_eval', metavar='num_eval',
+                    help='number of episodes to eval at each epoch',
+                    type=int,
+                    default=10)
+parser.add_argument('--epoch_length', metavar='epoch_length',
+                    help='length of training epoch (in parameter updates)',
+                    type=int,
+                    default=5*10**2)
 
 flags = parser.parse_args()
 
 flags.opt_eps = 1e-2          #avoids division by zero in optimizer update
 flags.num_frame = 4           #number of recent frames used as input to Q-network
-flags.frame_dim = 84          #dimension of processed frame (80x80)
-flags.batch_size = 32         #size of each training mini-batch
-flags.action_reps = 4         #number of times agent repeats an action
+flags.frame_dim = 84          #dimension of processed frame (84x84)
+flags.batch_size = 32         #size of each training mini-batch 32
 flags.eps_init = 1            #initial value for exploration probability
 flags.eps_final = .1          #final value (after annealing) for explore prob
-flags.start_train = 5*10**4     #number of actions after which training begins
+flags.start_train = 5*10**4   #number of actions after which training begins
 flags.buffer_size = 10**6     #size of replay memory buffer
-flags.train_int = 4          #number of actions selected between training iters
-flags.tn_update_freq = 2*10**4  #frequency of target network update
+flags.train_int = 4           #number of actions selected between training iters
+flags.tn_update_freq = 10**4  #frequency of target network update
 
 env = gym.make(flags.env)  #set environment
 flags.num_action = env.action_space.n     #Number of possible actions for chosen env
