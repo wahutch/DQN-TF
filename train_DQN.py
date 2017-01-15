@@ -63,7 +63,7 @@ parser.add_argument('--num_eval', metavar='num_eval',
 parser.add_argument('--epoch_length', metavar='epoch_length',
                     help='length of training epoch (in parameter updates)',
                     type=int,
-                    default=5*10**2)
+                    default=5*10**1)
 
 flags = parser.parse_args()
 
@@ -73,7 +73,7 @@ flags.frame_dim = 84          #dimension of processed frame (84x84)
 flags.batch_size = 32         #size of each training mini-batch 32
 flags.eps_init = 1            #initial value for exploration probability
 flags.eps_final = .1          #final value (after annealing) for explore prob
-flags.start_train = 5*10**4   #number of actions after which training begins
+flags.start_train = 5*10**2   #number of actions after which training begins
 flags.buffer_size = 10**6     #size of replay memory buffer
 flags.train_int = 4           #number of actions selected between training iters
 flags.tn_update_freq = 10**4  #frequency of target network update
@@ -98,5 +98,5 @@ while True:
     agent.annealExplore()
     
     if done:
-        agent.recordProgress()
+        agent.episodeFinished()
         observation = agent.initGame(env)
